@@ -899,6 +899,10 @@ config TARGET_THUNDERX_88XX
 	select OF_CONTROL
 	select SYS_CACHE_SHIFT_7
 
+config TARGET_MICRO2440
+	bool "Support Lab's Micro2440 Board"
+	select CPU_ARM920T
+
 endchoice
 
 source "arch/arm/mach-at91/Kconfig"
@@ -1040,6 +1044,7 @@ source "board/vscom/baltos/Kconfig"
 source "board/woodburn/Kconfig"
 source "board/work-microwave/work_92105/Kconfig"
 source "board/zipitz2/Kconfig"
+source "board/lab/micro2440/Kconfig"
 
 source "arch/arm/Kconfig.debug"
 

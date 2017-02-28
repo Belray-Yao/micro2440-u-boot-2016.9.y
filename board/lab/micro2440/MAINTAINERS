@@ -1,0 +1,6 @@
+MICRO2440 BOARD
+M:	zyro <yaoye-pc@outlook.com>
+S:	Maintained
+F:	board/lab/micro2440/
+F:	include/configs/micro2440.h
+F:	configs/micro2440_defconfig
