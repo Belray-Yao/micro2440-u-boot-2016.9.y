@@ -34,3 +34,7 @@ fi
 make ${PRODUCT_NAME}_defconfig
 
 make
+
+rm -rf /media/sf_D_DRIVE/arm/*.bin
+
+cp *.bin /media/sf_D_DRIVE/arm/

@@ -76,8 +76,9 @@ int board_early_init_f(void)
 
 	/* set up the I/O ports */
 	writel(0x007FFFFF, &gpio->gpacon);
-	writel(0x00044555, &gpio->gpbcon);
-	writel(0x000007FF, &gpio->gpbup);
+	writel(0x00015555, &gpio->gpbcon);
+	writel(0x0000001E, &gpio->gpbdat);
+	writel(0x000003FF, &gpio->gpbup);
 	writel(0xAAAAAAAA, &gpio->gpccon);
 	writel(0x0000FFFF, &gpio->gpcup);
 	writel(0xAAAAAAAA, &gpio->gpdcon);
