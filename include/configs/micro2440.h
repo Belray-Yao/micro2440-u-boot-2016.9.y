@@ -43,7 +43,7 @@
  * select serial console configuration
  */
 #define CONFIG_S3C24X0_SERIAL
-#define CONFIG_SERIAL1		1	/* we use SERIAL 1 on SMDK2410 */
+#define CONFIG_SERIAL1		1	/* we use SERIAL 1 on MICRO2440 */
 
 /************************************************************
  * USB support (currently only works with D-cache off)
