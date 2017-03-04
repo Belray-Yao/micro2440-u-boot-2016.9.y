@@ -53,7 +53,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static uint flash_offset_cfi[2] = { FLASH_OFFSET_CFI, FLASH_OFFSET_CFI_ALT };
+//static uint flash_offset_cfi[2] = { FLASH_OFFSET_CFI, FLASH_OFFSET_CFI_ALT };
 #ifdef CONFIG_FLASH_CFI_MTD
 static uint flash_verbose = 1;
 #else
@@ -543,6 +543,7 @@ static int flash_is_busy (flash_info_t * info, flash_sect_t sect)
 		break;
 	case CFI_CMDSET_AMD_STANDARD:
 	case CFI_CMDSET_AMD_EXTENDED:
+    case CFI_CMDSET_SST_OLD:
 #ifdef CONFIG_FLASH_CFI_LEGACY
 	case CFI_CMDSET_AMD_LEGACY:
 #endif
@@ -820,14 +821,15 @@ static int flash_write_cfiword (flash_info_t * info, ulong dest,
 		flash_write_cmd (info, sect, info->addr_unlock1, AMD_CMD_WRITE);
 		sect_found = 1;
 		break;
+    case CFI_CMDSET_SST_OLD:
 #ifdef CONFIG_FLASH_CFI_LEGACY
 	case CFI_CMDSET_AMD_LEGACY:
+#endif
 		sect = find_sector(info, dest);
 		flash_unlock_seq (info, 0);
 		flash_write_cmd (info, 0, info->addr_unlock1, AMD_CMD_WRITE);
 		sect_found = 1;
 		break;
-#endif
 	}
 
 	switch (info->portwidth) {
@@ -1130,6 +1132,8 @@ int flash_erase (flash_info_t * info, int s_first, int s_last)
 				break;
 #ifdef CONFIG_FLASH_CFI_LEGACY
 			case CFI_CMDSET_AMD_LEGACY:
+#endif
+            case CFI_CMDSET_SST_OLD:
 				flash_unlock_seq (info, 0);
 				flash_write_cmd (info, 0, info->addr_unlock1,
 						AMD_CMD_ERASE_START);
@@ -1137,7 +1141,7 @@ int flash_erase (flash_info_t * info, int s_first, int s_last)
 				flash_write_cmd (info, sect, 0,
 						AMD_CMD_ERASE_SECTOR);
 				break;
-#endif
+
 			default:
 				debug ("Unkown flash vendor %d\n",
 				       info->vendor);
@@ -1873,25 +1877,86 @@ static void __flash_cmd_reset(flash_info_t *info)
 void flash_cmd_reset(flash_info_t *info)
 	__attribute__((weak,alias("__flash_cmd_reset")));
 
+
+static int __cfi_qry_present(flash_info_t * info)
+{
+    if(flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP, 'Q')
+        && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 1, 'R')
+        && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 2, 'Y'))
+        return 1;
+    return 0;
+
+}
+static int __cfi_qry_mode_on(flash_info_t * info)
+{
+    flash_write_cmd(info, 0, 0, AMD_CMD_RESET);//0xf0
+    flash_write_cmd (info, 0, 0x55, FLASH_CMD_CFI);//0x98
+    if( __cfi_qry_present(info))
+    {
+        info->cfi_offset = 0x55;
+        return 1;
+    }
+
+    flash_write_cmd(info, 0, 0, AMD_CMD_RESET);//0xf0
+    flash_write_cmd(info, 0, 0, FLASH_CMD_RESET);//0xff
+    flash_write_cmd (info, 0, 0x55, FLASH_CMD_CFI);
+    if( __cfi_qry_present(info))
+    {
+        info->cfi_offset = 0x55;
+        return 1;
+    }
+
+    flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
+    flash_write_cmd (info, 0, 0x555, FLASH_CMD_CFI);
+    if( __cfi_qry_present(info))
+    {
+        info->cfi_offset = 0x555;
+        return 1;
+    }
+
+    flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
+    flash_write_cmd (info, 0, 0x5555, 0xaa);
+    flash_write_cmd (info, 0, 0x2aaa, 0x55);
+    flash_write_cmd (info, 0, 0x5555, FLASH_CMD_CFI);
+    if( __cfi_qry_present(info))
+    {
+        info->cfi_offset = 0x5555;
+        return 1;
+    }
+
+    flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
+    flash_write_cmd (info, 0, 0x555, 0xAA);
+    flash_write_cmd (info, 0, 0x2AA, 0x55);
+    flash_write_cmd (info, 0, 0x555, FLASH_CMD_CFI);
+    if( __cfi_qry_present(info))
+    {
+        info->cfi_offset = 0x555;
+        return 1;
+    }
+    //QRY not found
+    return 0;
+}
+
 static int __flash_detect_cfi (flash_info_t * info, struct cfi_qry *qry)
 {
-	int cfi_offset;
+	//int cfi_offset;
 
 	/* Issue FLASH reset command */
-	flash_cmd_reset(info);
+	//flash_cmd_reset(info);
 
-	for (cfi_offset = 0; cfi_offset < ARRAY_SIZE(flash_offset_cfi);
-	     cfi_offset++) {
-		flash_write_cmd (info, 0, flash_offset_cfi[cfi_offset],
-				 FLASH_CMD_CFI);
-		if (flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP, 'Q')
-		    && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 1, 'R')
-		    && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 2, 'Y')) {
+	//for (cfi_offset = 0; cfi_offset < ARRAY_SIZE(flash_offset_cfi);
+	//     cfi_offset++) {
+	//	flash_write_cmd (info, 0, flash_offset_cfi[cfi_offset],
+	//			 FLASH_CMD_CFI);
+	//	if (flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP, 'Q')
+	//	    && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 1, 'R')
+	//	    && flash_isequal (info, 0, FLASH_OFFSET_CFI_RESP + 2, 'Y')) {
+        if(__cfi_qry_mode_on(info)) {
 			flash_read_cfi(info, qry, FLASH_OFFSET_CFI_RESP,
 					sizeof(struct cfi_qry));
 			info->interface	= le16_to_cpu(qry->interface_desc);
 
-			info->cfi_offset = flash_offset_cfi[cfi_offset];
+			//info->cfi_offset = flash_offset_cfi[cfi_offset];
 			debug ("device interface is %d\n",
 			       info->interface);
 			debug ("found port %d chip %d ",
@@ -1919,9 +1984,15 @@ static int __flash_detect_cfi (flash_info_t * info, struct cfi_qry *qry)
 				info->addr_unlock2 = 0x555;
 			}
 
+            //for sst
+            if (le16_to_cpu(get_unaligned(&qry->p_id)) == CFI_CMDSET_SST_OLD)
+            {
+                info->addr_unlock1 = 0x5555;
+                info->addr_unlock2 = 0x2AAA;
+            }
+
 			info->name = "CFI conformant";
 			return 1;
-		}
 	}
 
 	return 0;
@@ -2094,6 +2165,7 @@ ulong flash_get_size (phys_addr_t base, int banknum)
 			break;
 		case CFI_CMDSET_AMD_STANDARD:
 		case CFI_CMDSET_AMD_EXTENDED:
+        case CFI_CMDSET_SST_OLD:
 			cmdset_amd_init(info, &qry);
 			break;
 		default:
